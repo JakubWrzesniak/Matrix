@@ -1,6 +1,9 @@
 #pragma once
 #include <iostream>
-
+#include <fstream>
+#include <vector>
+#include <string>
+#include <sstream> 
 using namespace std;
 
 template <typename T>
@@ -23,7 +26,10 @@ public:
 	int iGetIMSize() { return iMSize; };
 	int iGetINSize() { return iNSize; };
 
-	CMatrix<T>* transpose();
+	bool bRedMatrixFromFilme(string sfile);
+
+	CMatrix<T>* ctTranspose();
+	int iScalarProduct(CMatrix<T>& tMatrix);
 
 	CMatrix<T>* operator+ (CMatrix<T> &tMatrix);
 	CMatrix<T>* operator- (CMatrix<T> &tMatrix);
@@ -162,13 +168,57 @@ inline bool CMatrix<T>::bSetIdentityMatrix()
 }
 
 template<typename T>
-inline CMatrix<T>* CMatrix<T>::transpose()
+inline bool CMatrix<T>::bRedMatrixFromFilme(string sFile)
+{
+	double num;
+	vector<vector<double>> lines;
+	ifstream file(sFile.c_str() , ios_base::in);
+	if (!file.is_open()) {
+		cout << "Nie mozna odnalezc pliku." << endl;
+		return false; 
+	}
+	else {
+		string line;
+		vector<double> row;
+		while (getline(file, line)) {
+			stringstream ss;
+			ss << line;
+			double found;
+			while (!ss.eof()) {
+				ss >> found;
+				row.push_back(found);
+			}
+			lines.push_back(row);
+			row.clear();
+		}
+		file.close();
+		return true;
+	}
+}
+
+template<typename T>
+inline CMatrix<T>* CMatrix<T>::ctTranspose()
 {
 	CMatrix<T>* tNewMatrix = new CMatrix<T>(iNSize, iMSize);
 	for (int i = 0; i < iMSize; i++)
 		for (int j = 0; j < iNSize; j++)
 			tNewMatrix->bSetValueAt(j, i, tMatrix[i][j]);
 	return tNewMatrix;
+}
+
+template<typename T>
+inline int CMatrix<T>::iScalarProduct(CMatrix<T>& tMatrix)
+{
+	double result = numeric_limits<double>::min();
+	if (tMatrix.iGetIMSize() == 1 && iMSize == 1 && tMatrix.iGetINSize() == iNSize) {
+		result = 0;
+		for (int i = 0; i < iNSize; i++)
+			result += tGetValuFrom(0, i) * tMatrix.tGetValuFrom(0, i);
+	}
+	else {
+		cout << "Nie mozna wyliczc iloczynu sklaranego podanych wektorwo";
+	}
+	return result;
 }
 
 template<typename T>
