@@ -6,12 +6,15 @@
 #include <sstream> 
 using namespace std;
 
+const static int DEFAULT_SIZE = 5; 
+
 template <typename T>
 class CMatrix
 {
 public:
 	CMatrix();
 	CMatrix(int iMSize, int iNSize);
+	CMatrix(string sFileName);
 	//CMatrix(CMatrix tMatrix);
 	~CMatrix();
 
@@ -26,7 +29,7 @@ public:
 	int iGetIMSize() { return iMSize; };
 	int iGetINSize() { return iNSize; };
 
-	bool bRedMatrixFromFilme(string sfile);
+	bool bRedMatrixFromFile(string sFileName);
 
 	CMatrix<T>* ctTranspose();
 	int iScalarProduct(CMatrix<T>& tMatrix);
@@ -43,15 +46,19 @@ public:
 	CMatrix<S>* operator* (CMatrix<S> &sMatrix);
 private:
 	T** tMatrix;
-	int iMSize = 5;
-	int iNSize = 5; 
+	int iMSize = -1;
+	int iNSize = -1; 
 
 	static void vFillDefMatrix(T** tMatrix, int iMSize, int iNSize);
+	bool bCreateMatrixFromVector(vector<vector<T>> vTMatrix);
 };
 
 template<typename T>
 inline CMatrix<T>::CMatrix()
 {
+	iMSize = DEFAULT_SIZE;
+	iNSize = DEFAULT_SIZE;
+
 	tMatrix = new T* [iMSize];
 	for (int i = 0; i < iMSize; i++)
 		tMatrix[i] = new T[iNSize];
@@ -61,19 +68,13 @@ inline CMatrix<T>::CMatrix()
 template<typename T>
 inline CMatrix<T>::CMatrix(int iMSize, int iNSize)
 {
-	if (iMSize > 0 && iNSize > 0) {
-		this->iMSize = iMSize;
-		this->iNSize = iNSize;
-	}
-	else 
-		cout << "Wymiary macierzy musza byc wieksze od 0" << endl;
-	
-	tMatrix = new T *[iMSize];
-	
-	for (int i = 0; i < iMSize; i++)
-		tMatrix[i] = new T[iNSize];
+	bCreateMatrix(iMSize, iNSize);
+}
 
-	vFillDefMatrix(tMatrix, iMSize, iNSize);
+template<typename T>
+inline CMatrix<T>::CMatrix(string sFileName)
+{
+	if (!bRedMatrixFromFile(sFileName)) bCreateMatrix(DEFAULT_SIZE, DEFAULT_SIZE);
 }
 
 template<typename T>
@@ -105,12 +106,6 @@ inline bool CMatrix<T>::bCreateMatrix(int iMSize, int iNSize)
 		for (int i = 0; i < iMSize; i++)
 			tNewMatrix[i] = new T[iNSize];
 		vFillDefMatrix(tNewMatrix, iMSize, iNSize);
-		
-		for (int i = 0; i < (this->iMSize > iMSize ? iMSize : this->iMSize ); i++) {
-			for (int j = 0; j < (this->iNSize > iNSize ? iNSize : this->iNSize); j++) {
-				tNewMatrix[i][j] = tMatrix[i][j];
-			}
-		}
 		
 		for (int i = 0; i < this->iMSize; i++)
 			delete[] tMatrix[i];
@@ -168,31 +163,32 @@ inline bool CMatrix<T>::bSetIdentityMatrix()
 }
 
 template<typename T>
-inline bool CMatrix<T>::bRedMatrixFromFilme(string sFile)
+inline bool CMatrix<T>::bRedMatrixFromFile(string sFileName)
 {
-	double num;
-	vector<vector<double>> lines;
-	ifstream file(sFile.c_str() , ios_base::in);
+	
+	ifstream file(sFileName.c_str() , ios_base::in);
 	if (!file.is_open()) {
 		cout << "Nie mozna odnalezc pliku." << endl;
 		return false; 
 	}
 	else {
+		vector<vector<T>> vTMatrix;
 		string line;
-		vector<double> row;
+		vector<T> row;
+		T data;
+
 		while (getline(file, line)) {
 			stringstream ss;
 			ss << line;
-			double found;
 			while (!ss.eof()) {
-				ss >> found;
-				row.push_back(found);
+				ss >> data;
+				row.push_back(data);
 			}
-			lines.push_back(row);
+			vTMatrix.push_back(row);
 			row.clear();
 		}
 		file.close();
-		return true;
+		return bCreateMatrixFromVector(vTMatrix);
 	}
 }
 
@@ -314,6 +310,21 @@ inline void CMatrix<T>::vFillDefMatrix(T** tMatrix, int iMSize, int iNSize)
 	for (int i = 0; i < iMSize; i++) {
 		for (int j = 0; j < iNSize; j++)
 			tMatrix[i][j] = NULL;
+	}
+}
+
+template<typename T>
+inline bool CMatrix<T>::bCreateMatrixFromVector(vector<vector<T>> vTMatrix)
+{
+
+	if (bCreateMatrix(vTMatrix.size(), vTMatrix[0].size())) {
+		for (int i = 0; i < iMSize; i++)
+			for (int j = 0; j < iNSize; j++)
+				tMatrix[i][j] = vTMatrix[i][j];
+		return true;
+	}
+	else {
+		return false;
 	}
 }
 

@@ -81,7 +81,8 @@ void MatrixTest() {
 	(*vector1 * *vector2)->vPrintMatrix();
 	matrix6->ctTranspose()->vPrintMatrix();
 	cout << vector1->iScalarProduct(*(vector2->ctTranspose())) << endl;
-	matrix6->bRedMatrixFromFilme("data1.txt");
+	matrix6->bRedMatrixFromFile("data1.txt");
+	matrix6->vPrintMatrix();
 }
 
 int main(int argc, char* argv[]) {
