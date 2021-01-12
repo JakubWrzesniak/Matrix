@@ -2,88 +2,111 @@
 #include "CMatrix.h"
 
 using namespace std;
+CMatrix<int> ciMatrix1(2, 3);
+CMatrix<int> ciMatrix2(2, 3);
+CMatrix<int> ciMatrix3(3, 2);
+CMatrix<double> cdMatrix1(2, 3);
+CMatrix<double> cdMatrix2(2, 3);
+CMatrix<double> cdMatrix3(3, 2);
+void fillIntMatrix(CMatrix<int>* ciMatrix, int v) {
+	for (int i = 0; i < ciMatrix->iGetIMSize(); i++)
+		for (int j = 0; j < ciMatrix->iGetINSize(); j++)
+			ciMatrix->bSetValueAt(i, j, (i + j)*v);
+}
+void fillDoubleMatrix(CMatrix<double>* cdMatrix, double v) {
+	for (int i = 0; i < cdMatrix->iGetIMSize(); i++)
+		for (int j = 0; j < cdMatrix->iGetINSize(); j++)
+			cdMatrix->bSetValueAt(i, j, (i+j)*v );
+}
+void Constructor() {
+	CMatrix<int> cMatrix1;
+	cMatrix1.vPrintMatrix();
+}
+void AddMatrix() {
+	ciMatrix1.vPrintMatrix();
+	cout << endl;
+	ciMatrix2.vPrintMatrix();
+	cout << endl;
+	(ciMatrix1.cAdd(ciMatrix2)).vPrintMatrix();
+	cout << endl;
+	(ciMatrix1 + ciMatrix2).vPrintMatrix();
+	cout << endl;
+	cdMatrix1.vPrintMatrix();
+	cout << endl;
+	cdMatrix2.vPrintMatrix();
+	cout << endl;
+	(cdMatrix1.cAdd(cdMatrix2)).vPrintMatrix();
+	cout << endl;
+	(cdMatrix1 + cdMatrix2).vPrintMatrix();
+	cout << endl;
+}
 
+void SubMatrix() {
+	ciMatrix1.vPrintMatrix();
+	cout << endl;
+	ciMatrix2.vPrintMatrix();
+	cout << endl;
+	(ciMatrix1.cSub(ciMatrix2)).vPrintMatrix();
+	cout << endl;
+	(ciMatrix1 - ciMatrix2).vPrintMatrix();
+	cout << endl;
+	cdMatrix1.vPrintMatrix();
+	cout << endl;
+	cdMatrix2.vPrintMatrix();
+	cout << endl;
+	(cdMatrix1.cSub(cdMatrix2)).vPrintMatrix();
+	cout << endl;
+	(cdMatrix1 - cdMatrix2).vPrintMatrix();
+	cout << endl;
+}
+
+void MultMatrix() {
+	ciMatrix1.vPrintMatrix();
+	cout << endl;
+	(ciMatrix1.cMult(3)).vPrintMatrix();
+	cout << endl;
+	(ciMatrix1 * 2).vPrintMatrix();
+	cout << endl;
+	cdMatrix1.vPrintMatrix();
+	cout << endl;
+	(cdMatrix1.cMult(2.5)).vPrintMatrix();
+	cout << endl;
+	(cdMatrix1 * 2.5).vPrintMatrix();
+	cout << endl;
+}
+
+void MultMatrixByMatrix() {
+	ciMatrix1.vPrintMatrix();
+	cout << endl;
+	ciMatrix3.vPrintMatrix();
+	cout << endl;
+	(ciMatrix1.cMult(ciMatrix3)).vPrintMatrix();
+	cout << endl;
+	(ciMatrix1 * ciMatrix3).vPrintMatrix();
+	cout << endl;
+	cdMatrix1.vPrintMatrix();
+	cout << endl;
+	cdMatrix3.vPrintMatrix();
+	cout << endl;
+	(cdMatrix1.cMult(cdMatrix3)).vPrintMatrix();
+	cout << endl;
+	(cdMatrix1 * cdMatrix3).vPrintMatrix();
+	cout << endl;
+}
 void MatrixTest() {
-	CMatrix<int>* matrix1 = new CMatrix<int>(2, 4);
-	CMatrix<int>* matrix2 = new CMatrix<int>(3, 3);
-	CMatrix<int>* matrix3;
-	CMatrix<double>* matrix4;
-	CMatrix<double>* matrix5 = new CMatrix<double>(2, 3);
-	CMatrix<float>* matrix6 = new CMatrix<float>(3, 4);
-	CMatrix<int>* vector1 = new CMatrix<int>(1, 3);
-	CMatrix<int>* vector2 = new CMatrix<int>(3, 1);
 
-	matrix1->vPrintMatrix();
-	matrix1->bSetValueAt(0, 0, 1);
-	matrix1->bSetValueAt(1, 0, 1);
-	matrix1->bSetValueAt(1, 1, 1);
-	matrix1->bSetValueAt(0, 3, 5);
-	matrix1->vPrintMatrix();
-	matrix1->bCreateMatrix(3, 3);
-	matrix1->vPrintMatrix();
-	cout << matrix1->tGetValuFrom(0, 0) << endl;;
-	matrix1->bSetIdentityMatrix();
-	matrix1->vPrintMatrix();
+	fillIntMatrix(&ciMatrix1, 1);
+	fillIntMatrix(&ciMatrix2, 2);
+	fillIntMatrix(&ciMatrix3, 1);
+	fillDoubleMatrix(&cdMatrix1, 1.5);
+	fillDoubleMatrix(&cdMatrix2, 0.5);
+	fillDoubleMatrix(&cdMatrix3, 1.5);
 
-	matrix2->bSetValueAt(0,0,4);
-	matrix2->bSetValueAt(1,0,4);
-	matrix2->bSetValueAt(2,0,4);
-	matrix2->bSetValueAt(0,1,4);
-	matrix2->bSetValueAt(1,1,4);
-	matrix2->bSetValueAt(2,1,4);
-	matrix2->bSetValueAt(0,2,4);
-	matrix2->bSetValueAt(1,2,4);
-	matrix2->bSetValueAt(2,2,4);
-
-	matrix5->bSetValueAt(0,0,2.5);
-	matrix5->bSetValueAt(1,0,2.5);
-	matrix5->bSetValueAt(0,1,2.5);
-	matrix5->bSetValueAt(1,1,2.5);
-	matrix5->bSetValueAt(0,2,2.5);
-	matrix5->bSetValueAt(1,2,2.5);
-
-	matrix6->bSetValueAt(0,0,1);
-	matrix6->bSetValueAt(0,1,2);
-	matrix6->bSetValueAt(0,2,3);
-	matrix6->bSetValueAt(0,3,4);
-	matrix6->bSetValueAt(1,0,5);
-	matrix6->bSetValueAt(1,1,6);
-	matrix6->bSetValueAt(1,2,7);
-	matrix6->bSetValueAt(1,3,8);
-	matrix6->bSetValueAt(2,0,9);
-	matrix6->bSetValueAt(2,1,10);
-	matrix6->bSetValueAt(2,2,11);
-	matrix6->bSetValueAt(2,3,12);
-
-	vector1->bSetValueAt(0, 0, 1);
-	vector1->bSetValueAt(0, 1, 3);
-	vector1->bSetValueAt(0, 2, -5);
-
-	vector2->bSetValueAt(0, 0, 4);
-	vector2->bSetValueAt(1, 0, -2);
-	vector2->bSetValueAt(2, 0, -1);
-
-	matrix2->vPrintMatrix();
-	matrix3 = *matrix1 + *matrix2;
-	matrix3->vPrintMatrix();
-	matrix3 = *matrix3 - *matrix2;
-	matrix3->vPrintMatrix();
-	matrix4 = *matrix3 * 4.5;
-	matrix4->vPrintMatrix();
-	matrix3 = *matrix3 * 4;
-	matrix3->vPrintMatrix();
-	matrix4 = *matrix4 * 3;
-	matrix4->vPrintMatrix();
-	matrix5->vPrintMatrix();
-	matrix6->vPrintMatrix();
-	(*matrix5 * *matrix6)->vPrintMatrix();
-
-	(*vector1 * *vector2)->vPrintMatrix();
-	matrix6->ctTranspose()->vPrintMatrix();
-	cout << vector1->iScalarProduct(*(vector2->ctTranspose())) << endl;
-	matrix6->bRedMatrixFromFile("data1.txt");
-	matrix6->vPrintMatrix();
-	matrix6[1];
+	//AddMatrix();
+	//SubMatrix();
+	//MultMatrix();
+	//MultMatrixByMatrix();
+	//Constructor();
 }
 
 int main(int argc, char* argv[]) {

@@ -17,7 +17,8 @@ public:
 	CMatrix();
 	CMatrix(int iMSize, int iNSize);
 	CMatrix(string sFileName);
-	//CMatrix(CMatrix tMatrix);
+	CMatrix(CMatrix<T>& cOther);
+	CMatrix(CMatrix<T>&& cOther);
 	~CMatrix();
 
 	void vPrintMatrix();
@@ -28,6 +29,7 @@ public:
 	bool bSetValueAt(int iM, int iN, T tNewValue);
 	bool bIsSquareMatrix() { return iMSize == iNSize; };
 	bool bSetIdentityMatrix();
+
 	CMatrix<T>* cTColumnVector(int iCol);
 	CMatrix<T>* cTRowVector(int iRow);
 
@@ -39,21 +41,18 @@ public:
 	CMatrix<T>* ctTranspose();
 	int iScalarProduct(CMatrix<T>& tMatrix);
 
-	CMatrix<T> operator+ (CMatrix<int> &tMatrix);
-	template <typename S>
-	CMatrix<S> operator+ (CMatrix<S> &sMatrix);
+	CMatrix<T> cAdd(const CMatrix<T>& cOther);
+	CMatrix<T> operator+ (const CMatrix<T>& cOther);
 
-	CMatrix<T> operator- (CMatrix<int> &tMatrix);
-	template <typename S>
-	CMatrix<S> operator- (CMatrix<S>& sMatrix);
+	CMatrix<T> cSub(const CMatrix<T>& cOther);
+	CMatrix<T> operator- (const CMatrix<T>& cOther);
 
-	CMatrix<T> operator* (int sC);
-	template <typename S>
-	CMatrix<S> operator* (S sC);
+	CMatrix<T> cMult(const T tVal);
+	CMatrix<T> operator* (const T tVal);
 
-	CMatrix<T> operator* (CMatrix<int> &iMatrix);
-	template <typename S>
-	CMatrix<S> operator* (CMatrix<S> &sMatrix);
+	CMatrix<T> cMult(const CMatrix<T>& cOther);
+	CMatrix<T> operator* (const CMatrix<T> &cOther);
+
 private:
 	T** tMatrix;
 	int iMSize = -1;
@@ -66,13 +65,7 @@ private:
 template<typename T>
 inline CMatrix<T>::CMatrix()
 {
-	iMSize = DEFAULT_SIZE;
-	iNSize = DEFAULT_SIZE;
-
-	tMatrix = new T* [iMSize];
-	for (int i = 0; i < iMSize; i++)
-		tMatrix[i] = new T[iNSize];
-	vFillDefMatrix();
+	bCreateMatrix(DEFAULT_SIZE, DEFAULT_SIZE);
 }
 
 template<typename T>
@@ -84,21 +77,53 @@ inline CMatrix<T>::CMatrix(int iMSize, int iNSize)
 template<typename T>
 inline CMatrix<T>::CMatrix(string sFileName)
 {
-	if (!bRedMatrixFromFile(sFileName)) bCreateMatrix(DEFAULT_SIZE, DEFAULT_SIZE);
+	if (!bRedMatrixFromFile(sFileName)) 
+		bCreateMatrix(DEFAULT_SIZE, DEFAULT_SIZE);
+}
+
+template<typename T>
+inline CMatrix<T>::CMatrix(CMatrix<T>& cOther)
+{
+	cout << "KOPIUJE!" << endl;
+	iMSize = cOther.iMSize;
+	iNSize = cOther.iNSize;
+	tMatrix = new T * [iMSize];
+
+	for (int i = 0; i < iMSize; i++)
+		tMatrix[i] = new T[iNSize];
+	for (int i = 0; i < iMSize; i++)
+		for (int j = 0; j < iNSize; j++)
+			tMatrix[i][j] = cOther.tGetValuFrom(i, j);
+}
+
+template<typename T>
+inline CMatrix<T>::CMatrix(CMatrix<T>&& cOther)
+{
+	cout << "PRZENOSZE" << endl;
+	iMSize = cOther.iMSize;
+	iNSize = cOther.iNSize;
+	tMatrix = cOther.tMatrix;
+	cOther.tMatrix = NULL;
 }
 
 template<typename T>
 inline CMatrix<T>::~CMatrix()
 {
-	for (int i = 0; i < iMSize; i++) 
-		delete[] tMatrix[i];
-	delete tMatrix;
+	cout << "USUWAM" << endl;
+	vPrintMatrix();
+	if (tMatrix != NULL) {
+		for (int i = 0; i < iMSize; i++)
+			delete[] tMatrix[i];
+		delete tMatrix;
+	}
+	cout << "USUNIETE" << endl;
 	
 }
 
 template<typename T>
 inline void CMatrix<T>::vPrintMatrix()
 {
+	if(tMatrix != NULL)
 	for (int i = 0; i < iMSize; i++) {
 		cout << "| ";
 		for (int j = 0; j < iNSize; j++)
@@ -117,9 +142,13 @@ inline bool CMatrix<T>::bCreateMatrix(int iMSize, int iNSize)
 			tNewMatrix[i] = new T[iNSize];
 		vFillDefMatrix(tNewMatrix, iMSize, iNSize);
 		
-		for (int i = 0; i < this->iMSize; i++)
-			delete[] tMatrix[i];
-		delete[] tMatrix;
+		if (tMatrix != NULL) {
+			for (int i = 0; i < this->iMSize; i++)
+				if (tMatrix[i] != NULL)
+					delete[] tMatrix[i];
+			delete[] tMatrix;
+		}
+	
 
 		tMatrix = tNewMatrix;
 		this->iMSize = iMSize;
@@ -279,120 +308,79 @@ inline int CMatrix<T>::iScalarProduct(CMatrix<T>& tMatrix)
 	return result;
 }
 
-template<typename T>
-inline CMatrix<T>* CMatrix<T>::operator+(CMatrix<int>& tMatrix)
-{
-	if (iMSize == tMatrix.iMSize && iNSize == tMatrix.iNSize) {
-		CMatrix<T>* tNewMatrix = new CMatrix<T>(iMSize, iNSize);
-		for (int i = 0; i < iMSize; i++)
-			for (int j = 0; j < iNSize; j++)
-				tNewMatrix->bSetValueAt(i, j, this->tMatrix[i][j] + tMatrix.tGetValuFrom(i, j));
-		return tNewMatrix;
-	}
-	return this;
-}
-template<typename T>
-template<typename S>
-inline CMatrix<S>* CMatrix<T>::operator+(CMatrix<S>& tMatrix)
-{
-	if (iMSize == tMatrix.iMSize && iNSize == tMatrix.iNSize) {
-		CMatrix<S>* tNewMatrix = new CMatrix<S>(iMSize, iNSize);
-		for (int i = 0; i < iMSize; i++)
-			for (int j = 0; j < iNSize; j++)
-				tNewMatrix->bSetValueAt(i, j, this->tMatrix[i][j] + tMatrix.tGetValuFrom(i, j));
-		return tNewMatrix;
-	}
-	return this;
-}
-
 
 template<typename T>
-inline CMatrix<T>* CMatrix<T>::operator-(CMatrix<int>& tMatrix)
+inline CMatrix<T> CMatrix<T>::cAdd(const CMatrix<T>& cOther)
 {
-	if (iMSize == tMatrix.iMSize && iNSize == tMatrix.iNSize) {
-		CMatrix<T>* tNewMatrix = new CMatrix<T>(iMSize, iNSize);
+	CMatrix<T> tNewMatrix(iMSize, iNSize);
+	if (iMSize == cOther.iMSize && iNSize == cOther.iNSize)
 		for (int i = 0; i < iMSize; i++)
 			for (int j = 0; j < iNSize; j++)
-				tNewMatrix->bSetValueAt(i, j, this->tMatrix[i][j] - tMatrix.tGetValuFrom(i, j));
-		return tNewMatrix;
-	}
-	return this;
+				tNewMatrix.bSetValueAt(i, j, tMatrix[i][j] + cOther.tMatrix[i][j]);
+	return std::move(tNewMatrix);
 }
 
 template<typename T>
-template<typename S>
-inline CMatrix<S>* CMatrix<T>::operator-(CMatrix<S>& tMatrix)
-{
-	if (iMSize == tMatrix.iMSize && iNSize == tMatrix.iNSize) {
-		CMatrix<S>* tNewMatrix = new CMatrix<S>(iMSize, iNSize);
-		for (int i = 0; i < iMSize; i++)
-			for (int j = 0; j < iNSize; j++)
-				tNewMatrix->bSetValueAt(i, j, this->tMatrix[i][j] - tMatrix.tGetValuFrom(i, j));
-		return tNewMatrix;
-	}
-	return this;
+inline CMatrix<T> CMatrix<T>::operator+(const CMatrix<T>& cOther) {
+	return cAdd(cOther);
 }
 
 template<typename T>
-inline CMatrix<T>* CMatrix<T>::operator*(int sC)
+inline CMatrix<T> CMatrix<T>::cSub(const CMatrix<T>& cOther)
 {
-	CMatrix<T>* tNewMatrix = new CMatrix<T>(iMSize, iNSize);
+	CMatrix<T> tNewMatrix(iMSize, iNSize);
+	if (iMSize == cOther.iMSize && iNSize == cOther.iNSize)
+		for (int i = 0; i < iMSize; i++)
+			for (int j = 0; j < iNSize; j++)
+				tNewMatrix.bSetValueAt(i, j, tMatrix[i][j] - cOther.tMatrix[i][j]);
+	return std::move(tNewMatrix);
+}
+
+template<typename T>
+inline CMatrix<T> CMatrix<T>::operator-(const CMatrix<T>& cOther)
+{
+	return cSub(cOther);
+}
+
+
+template<typename T>
+inline CMatrix<T> CMatrix<T>::cMult(const T tVal)
+{
+	CMatrix<T> tNewMatrix(iMSize, iNSize);
 	for (int i = 0; i < iMSize; i++)
 		for (int j = 0; j < iNSize; j++)
-			tNewMatrix->bSetValueAt(i, j, tMatrix[i][j] * sC);
-	return tNewMatrix;
+			tNewMatrix.bSetValueAt(i, j, tMatrix[i][j] * tVal);
+	return std::move(tNewMatrix);
 }
 
 template<typename T>
-inline CMatrix<T>* CMatrix<T>::operator*(CMatrix<int> &iMatrix)
+inline CMatrix<T> CMatrix<T>::operator*(const T tVal)
 {
-	if (iNSize == iMatrix.iGetIMSize()) {
-		CMatrix<T> *tNewMatrix = new CMatrix<T>(iMSize, iMatrix.iGetINSize());
-		for(int i = 0; i < iMSize ; i++)
-			for (int j = 0; j < iMatrix.iGetINSize(); j++) {
+	return cMult(tVal);
+}
+
+template<typename T>
+inline CMatrix<T> CMatrix<T>::cMult(const CMatrix<T>& cOther)
+{
+	CMatrix<T> tNewMatrix(iMSize, cOther.iNSize);
+	if (iNSize == cOther.iMSize) {
+		for (int i = 0; i < iMSize; i++)
+			for (int j = 0; j < cOther.iNSize; j++) {
 				T s = 0;
-				for (int k = 0 ;k < iNSize; k++)
-					s += tMatrix[i][k] * iMatrix.tGetValuFrom(k,j);
-				tNewMatrix->bSetValueAt(i,j,s);
-			}
-		return tNewMatrix;
-	}
-	else {
-		cout << "Nie mozna pomnozyc podanych macierzy." << endl;
-		return new CMatrix<T>(iMSize, iNSize);
-	}
-}
-
-template<typename T>
-template<typename S>
-inline CMatrix<S>* CMatrix<T>::operator*(S sC)
-{
-	CMatrix<S>* tNewMatrix = new CMatrix<S>(iMSize, iNSize);
-	for (int i = 0; i < iMSize; i++)
-		for (int j = 0; j < iNSize; j++)
-			tNewMatrix->bSetValueAt(i, j, tMatrix[i][j] * sC);
-	return tNewMatrix;
-}
-
-template<typename T>
-template<typename S>
-inline CMatrix<S>* CMatrix<T>::operator*(CMatrix<S> &sMatrix)
-{
-	CMatrix<S>* tNewMatrix = new CMatrix<S>(iMSize, sMatrix.iGetINSize());
-	if (iNSize == sMatrix.iGetIMSize()) {
-		for (int i = 0; i < iMSize; i++)
-			for (int j = 0; j < sMatrix.iGetINSize(); j++) {
-				S s = 0;
 				for (int k = 0; k < iNSize; k++)
-					s += tMatrix[i][k] * sMatrix.tGetValuFrom(k, j);
-				tNewMatrix->bSetValueAt(i, j, s);
+					s += tMatrix[i][k] * cOther.tMatrix[i][j];
+				tNewMatrix.bSetValueAt(i, j, s);
 			}
 	}
-	else {
-		cout << "Nie mozna pomnozyc podanych macierzy." << endl;
-	}
-	return tNewMatrix;
+	return std::move(tNewMatrix);
 }
+
+template<typename T>
+inline CMatrix<T> CMatrix<T>::operator*(const CMatrix<T>& cOther)
+{
+	return cMult(cOther);
+}
+
 
 template<typename T>
 inline void CMatrix<T>::vFillDefMatrix(T** tMatrix, int iMSize, int iNSize)
