@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 #include <sstream> 
+#include <map>
+
 using namespace std;
 
 const static int DEFAULT_SIZE = 5; 
@@ -21,10 +23,13 @@ public:
 	void vPrintMatrix();
 	bool bCreateMatrix(int iMSize, int iNSize);
 
+	T* operator[] (int iM);
 	T tGetValuFrom(int iM, int iN);
 	bool bSetValueAt(int iM, int iN, T tNewValue);
 	bool bIsSquareMatrix() { return iMSize == iNSize; };
 	bool bSetIdentityMatrix();
+	CMatrix<T>* cTColumnVector(int iCol);
+	CMatrix<T>* cTRowVector(int iRow);
 
 	int iGetIMSize() { return iMSize; };
 	int iGetINSize() { return iNSize; };
@@ -34,23 +39,28 @@ public:
 	CMatrix<T>* ctTranspose();
 	int iScalarProduct(CMatrix<T>& tMatrix);
 
-	CMatrix<T>* operator+ (CMatrix<T> &tMatrix);
-	CMatrix<T>* operator- (CMatrix<T> &tMatrix);
-
-	CMatrix<T>* operator* (int sC);
+	CMatrix<T> operator+ (CMatrix<int> &tMatrix);
 	template <typename S>
-	CMatrix<S>* operator* (S sC);
+	CMatrix<S> operator+ (CMatrix<S> &sMatrix);
 
-	CMatrix<T>* operator* (CMatrix<int> &iMatrix);
+	CMatrix<T> operator- (CMatrix<int> &tMatrix);
 	template <typename S>
-	CMatrix<S>* operator* (CMatrix<S> &sMatrix);
+	CMatrix<S> operator- (CMatrix<S>& sMatrix);
+
+	CMatrix<T> operator* (int sC);
+	template <typename S>
+	CMatrix<S> operator* (S sC);
+
+	CMatrix<T> operator* (CMatrix<int> &iMatrix);
+	template <typename S>
+	CMatrix<S> operator* (CMatrix<S> &sMatrix);
 private:
 	T** tMatrix;
 	int iMSize = -1;
 	int iNSize = -1; 
 
 	static void vFillDefMatrix(T** tMatrix, int iMSize, int iNSize);
-	bool bCreateMatrixFromVector(vector<vector<T>> vTMatrix);
+	bool bCreateMatrixFromVector(vector<vector<T>> vTMatrix, int iN);
 };
 
 template<typename T>
@@ -122,6 +132,14 @@ inline bool CMatrix<T>::bCreateMatrix(int iMSize, int iNSize)
 	}
 }
 
+
+
+template<typename T>
+inline T* CMatrix<T>::operator[](int iM)
+{
+	return tMatrix[iM];
+}
+
 template<typename T>
 inline T CMatrix<T>::tGetValuFrom(int iM, int iN)
 {
@@ -163,9 +181,36 @@ inline bool CMatrix<T>::bSetIdentityMatrix()
 }
 
 template<typename T>
+inline CMatrix<T>* CMatrix<T>::cTColumnVector(int iCol)
+{
+	CMatrix<T>* newTMatrix = new CMatrix<T>(1, iNSize);
+	if (iCol < iNSize) {
+		for (int i = 0; i < iMSize; i++)
+			newTMatrix[0][i] = tMatrix[i][iCol];
+	}
+	else {
+		cout << "Kolumna o podanym numerze nie istnieje" << endl;
+	}
+	return newTMatrix;
+}
+
+template<typename T>
+inline CMatrix<T>* CMatrix<T>::cTRowVector(int iRow)
+{
+	CMatrix<T>* newTMatrix = new CMatrix<T>(1, iMSize);
+	if (iRow < iMSize) {
+		for (int i = 0; i < iNSize; i++)
+			newTMatrix[0][i] = tMatrix[iRow][i];
+	}
+	else {
+		cout << "Rzad o podanym numerze nie istnieje" << endl;
+	}
+	return newTMatrix;
+}
+
+template<typename T>
 inline bool CMatrix<T>::bRedMatrixFromFile(string sFileName)
 {
-	
 	ifstream file(sFileName.c_str() , ios_base::in);
 	if (!file.is_open()) {
 		cout << "Nie mozna odnalezc pliku." << endl;
@@ -173,6 +218,11 @@ inline bool CMatrix<T>::bRedMatrixFromFile(string sFileName)
 	}
 	else {
 		vector<vector<T>> vTMatrix;
+		map<int, int> mColLength;
+		map<int, int>::iterator it;
+		int iMaxNumOfCol=-1;
+		int iNumOfCol;
+		int length = 0;
 		string line;
 		vector<T> row;
 		T data;
@@ -183,12 +233,24 @@ inline bool CMatrix<T>::bRedMatrixFromFile(string sFileName)
 			while (!ss.eof()) {
 				ss >> data;
 				row.push_back(data);
+				length++;
 			}
 			vTMatrix.push_back(row);
+			it = mColLength.find(length);
+			if (it != mColLength.end()) mColLength[length] = it->second + 1;
+			else mColLength.insert(pair<int,int>(length, 1));
+			length = 0;
 			row.clear();
 		}
 		file.close();
-		return bCreateMatrixFromVector(vTMatrix);
+		for (it = mColLength.begin(); it != mColLength.end(); ++it) {
+			cout << it->first <<" => " << it->second << endl;
+			if (it->second > iMaxNumOfCol) {
+				iMaxNumOfCol = it->second;
+				iNumOfCol = it->first;
+			}
+		}
+		return bCreateMatrixFromVector(vTMatrix, iNumOfCol);
 	}
 }
 
@@ -218,7 +280,7 @@ inline int CMatrix<T>::iScalarProduct(CMatrix<T>& tMatrix)
 }
 
 template<typename T>
-inline CMatrix<T>* CMatrix<T>::operator+(CMatrix<T>& tMatrix)
+inline CMatrix<T>* CMatrix<T>::operator+(CMatrix<int>& tMatrix)
 {
 	if (iMSize == tMatrix.iMSize && iNSize == tMatrix.iNSize) {
 		CMatrix<T>* tNewMatrix = new CMatrix<T>(iMSize, iNSize);
@@ -229,12 +291,40 @@ inline CMatrix<T>* CMatrix<T>::operator+(CMatrix<T>& tMatrix)
 	}
 	return this;
 }
+template<typename T>
+template<typename S>
+inline CMatrix<S>* CMatrix<T>::operator+(CMatrix<S>& tMatrix)
+{
+	if (iMSize == tMatrix.iMSize && iNSize == tMatrix.iNSize) {
+		CMatrix<S>* tNewMatrix = new CMatrix<S>(iMSize, iNSize);
+		for (int i = 0; i < iMSize; i++)
+			for (int j = 0; j < iNSize; j++)
+				tNewMatrix->bSetValueAt(i, j, this->tMatrix[i][j] + tMatrix.tGetValuFrom(i, j));
+		return tNewMatrix;
+	}
+	return this;
+}
+
 
 template<typename T>
-inline CMatrix<T>* CMatrix<T>::operator-(CMatrix<T>& tMatrix)
+inline CMatrix<T>* CMatrix<T>::operator-(CMatrix<int>& tMatrix)
 {
 	if (iMSize == tMatrix.iMSize && iNSize == tMatrix.iNSize) {
 		CMatrix<T>* tNewMatrix = new CMatrix<T>(iMSize, iNSize);
+		for (int i = 0; i < iMSize; i++)
+			for (int j = 0; j < iNSize; j++)
+				tNewMatrix->bSetValueAt(i, j, this->tMatrix[i][j] - tMatrix.tGetValuFrom(i, j));
+		return tNewMatrix;
+	}
+	return this;
+}
+
+template<typename T>
+template<typename S>
+inline CMatrix<S>* CMatrix<T>::operator-(CMatrix<S>& tMatrix)
+{
+	if (iMSize == tMatrix.iMSize && iNSize == tMatrix.iNSize) {
+		CMatrix<S>* tNewMatrix = new CMatrix<S>(iMSize, iNSize);
 		for (int i = 0; i < iMSize; i++)
 			for (int j = 0; j < iNSize; j++)
 				tNewMatrix->bSetValueAt(i, j, this->tMatrix[i][j] - tMatrix.tGetValuFrom(i, j));
@@ -314,12 +404,11 @@ inline void CMatrix<T>::vFillDefMatrix(T** tMatrix, int iMSize, int iNSize)
 }
 
 template<typename T>
-inline bool CMatrix<T>::bCreateMatrixFromVector(vector<vector<T>> vTMatrix)
+inline bool CMatrix<T>::bCreateMatrixFromVector(vector<vector<T>> vTMatrix, int iN)
 {
-
-	if (bCreateMatrix(vTMatrix.size(), vTMatrix[0].size())) {
+	if (bCreateMatrix(vTMatrix.size(), iN)) {
 		for (int i = 0; i < iMSize; i++)
-			for (int j = 0; j < iNSize; j++)
+			for (int j = 0; j < (vTMatrix[i].size() ? vTMatrix[i].size() : iNSize ); j++)
 				tMatrix[i][j] = vTMatrix[i][j];
 		return true;
 	}
