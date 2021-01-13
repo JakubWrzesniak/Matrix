@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 #include "CMatrix.h"
 
 using namespace std;
@@ -93,6 +94,18 @@ void MultMatrixByMatrix() {
 	(cdMatrix1 * cdMatrix3).vPrintMatrix();
 	cout << endl;
 }
+
+void MatrixFromFile() {
+	CMatrix<double> mFromFile("data1.txt");
+	mFromFile.vPrintMatrix();
+}
+void GetOperator() {
+	ciMatrix1.vPrintMatrix();
+	cout<< "GetOperator: "  << ciMatrix1[1][1] << endl;;
+	ciMatrix1[1][1] = 100;
+	ciMatrix1.vPrintMatrix();
+	cout << "GetOperator: " << ciMatrix1[1][1] << endl;;
+}
 void MatrixTest() {
 
 	fillIntMatrix(&ciMatrix1, 1);
@@ -107,6 +120,8 @@ void MatrixTest() {
 	//MultMatrix();
 	//MultMatrixByMatrix();
 	//Constructor();
+	//MatrixFromFile();
+	GetOperator();
 }
 
 int main(int argc, char* argv[]) {
