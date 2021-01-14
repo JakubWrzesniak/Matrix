@@ -18,16 +18,27 @@
     <ClInclude Include="CMatrix.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
+    <ClInclude Include="Errors.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CMatrix.cpp">
+    <ClCompile Include="CError.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
-    <ClCompile Include="Źródło.cpp">
+    <ClCompile Include="CError.h">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="MatrixTest.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="data1.txt" />
+    <Text Include="dataDouble.txt" />
+    <Text Include="dataInt.txt" />
+    <Text Include="dataMissArgInt.txt" />
+    <Text Include="dataWrongArgInt.txt" />
+    <Text Include="dataMissArgDouble.txt" />
+    <Text Include="dataWrongArgDouble.txt" />
   </ItemGroup>
 </Project>

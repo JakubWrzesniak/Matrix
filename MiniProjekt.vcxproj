@@ -140,13 +140,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CMatrix.h" />
+    <ClInclude Include="Errors.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CMatrix.cpp" />
-    <ClCompile Include="Źródło.cpp" />
+    <ClCompile Include="CError.cpp" />
+    <ClCompile Include="CError.h" />
+    <ClCompile Include="MatrixTest.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="data1.txt" />
+    <Text Include="dataDouble.txt" />
+    <Text Include="dataInt.txt" />
+    <Text Include="dataMissArgDouble.txt" />
+    <Text Include="dataMissArgInt.txt" />
+    <Text Include="dataWrongArgDouble.txt" />
+    <Text Include="dataWrongArgInt.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

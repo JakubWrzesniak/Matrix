@@ -5,11 +5,11 @@
 #include <string>
 #include <sstream> 
 #include <map>
-#include <limits>
+#include "CError.h"
+
+#define DEFAULT_SIZE  5
 
 using namespace std;
-
-const static int DEFAULT_SIZE = 5; 
 
 template <typename T>
 class CMatrix
@@ -17,104 +17,111 @@ class CMatrix
 public:
 	CMatrix();
 	CMatrix(int iMSize, int iNSize);
-	CMatrix(string sFileName);
 	CMatrix(CMatrix<T>& cOther);
 	CMatrix(CMatrix<T>&& cOther);
 	~CMatrix();
 
-	void vPrintMatrix();
-	bool bCreateMatrix(int iMSize, int iNSize);
+	bool bCreateMatrix(int iMSize, int iNSize, CErrorMatrix* ccErrorCode); 
 	void vFillDefMatrix(T tValue);	
 	
-	T tScalarProduct(CMatrix<T>& tMatrix);
+	T tScalarProduct(CMatrix<T>& tMatrix, CErrorMatrix* cErrorCode);
 
 	bool bIsSquareMatrix() { return iMSize == iNSize; };
-	bool bSetIdentityMatrix();
+	bool bSetIdentityMatrix(CErrorMatrix* cErrorCode);
 	
-	bool bRedMatrixFromFile(string sFileName);
+	bool bReadMatrixFromFile(string sFileName, CErrorMatrix* cErrorCode);
 
-	CMatrix<T> cTColumnVector(int iCol);
-	CMatrix<T> cTRowVector(int iRow);
-	CMatrix<T> ctTranspose();
-
+	CMatrix<T> cTColumnVector(int iCol, CErrorMatrix* cErrorCode);
+	CMatrix<T> cTRowVector(int iRow, CErrorMatrix* cErrorCode);
+	
 	int iGetIMSize() { return iMSize; };
 	int iGetINSize() { return iNSize; };
 
-	bool bSetValueAt(int iM, int iN, T tNewValue);
+	bool bSetValueAt(int iM, int iN, T tNewValue, CErrorMatrix* cErrorCode);
 
-	bool bCreateMatrixFromVector(vector<vector<T>> vTMatrix);
-	bool operator = (const vector<vector<T>> vTMatrix);
+	bool bCreateMatrixFromVector(vector<vector<T>> vTMatrix, CErrorMatrix* cErrorCode);
 
-	T tGetValuFrom(int iM, int iN);
-	T* operator[] (int iM) { return tMatrix[iM]; };
+	T tGetValuFrom(int iM, int iN, CErrorMatrix* cErrorCode);
+	T* operator[] (int iM) ;
+	CMatrix<T>& ctTranspose(CErrorMatrix* cErrorCode);
+	void operator~();
 
-	void operator = (const CMatrix<T>& cOther);
+	CMatrix<T>& operator= (const CMatrix<T>& cOther);
+	void operator= (CMatrix<T>&& cOther);
 
-	CMatrix<T> cAdd(const CMatrix<T>& cOther);
+	CMatrix<T> cAdd(const CMatrix<T>& cOther, CErrorMatrix* cErrorCode);
 	CMatrix<T> operator+ (const CMatrix<T>& cOther);
-	void operator += (const CMatrix<T>& cOther);
+	CMatrix<T>& operator += (const CMatrix<T>& cOther);
 
-	CMatrix<T> cSub(const CMatrix<T>& cOther);
+	CMatrix<T> cSub(const CMatrix<T>& cOther, CErrorMatrix* cErrorCode);
 	CMatrix<T> operator- (const CMatrix<T>& cOther);
-	void operator -= (const CMatrix<T>& cOther);
+	CMatrix<T>& operator -= (const CMatrix<T>& cOther);
 
 	CMatrix<T> cMult(const T tVal);
 	CMatrix<T> operator* (const T tVal);
-	void operator *= (const T tVal);
+	CMatrix<T>& operator *= (const T tVal);
 
-	CMatrix<T> cMult(const CMatrix<T>& cOther);
+	CMatrix<T> cMult(const CMatrix<T>& cOther, CErrorMatrix* cErrorCode);
 	CMatrix<T> operator* (const CMatrix<T> &cOther);
-	void operator*= (const CMatrix<T>& cOther);
+	CMatrix<T>& operator*= (const CMatrix<T>& cOther);
+
+	void vPrintMatrix() { cout << *this; };
+
+	friend ostream& operator<< (ostream& os, const CMatrix<T>& cOther) 
+	{
+		if (cOther.tMatrix != NULL)
+			for (int i = 0; i < cOther.iMSize; i++) {
+				os << "| ";
+				for (int j = 0; j < cOther.iNSize; j++)
+					os << cOther.tMatrix[i][j] << " ";
+				os << " |" << endl;
+			}
+		return os;
+	}
+
 
 private:
 	T** tMatrix;
-	int iMSize = -1;
-	int iNSize = -1; 
+	int iMSize;
+	int iNSize; 
+
+	void vDeleteMatrix();
+	void vCopy(T** tOther);
+	bool vInitialMatrix(int iMSize, int iNSize);
 };
 
 template<typename T>
 inline CMatrix<T>::CMatrix()
 {
-	if(bCreateMatrix(DEFAULT_SIZE, DEFAULT_SIZE))
+	vInitialMatrix(DEFAULT_SIZE, DEFAULT_SIZE);
 	vFillDefMatrix(0);
 }
 
 template<typename T>
 inline CMatrix<T>::CMatrix(int iMSize, int iNSize)
 {
-	if(bCreateMatrix(iMSize, iNSize))
+	if (!vInitialMatrix(iMSize, iNSize))
+		vInitialMatrix(DEFAULT_SIZE, DEFAULT_SIZE);
 	vFillDefMatrix(0);
-}
-
-template<typename T>
-inline CMatrix<T>::CMatrix(string sFileName)
-{
-	if (!bRedMatrixFromFile(sFileName)) {
-		bCreateMatrix(DEFAULT_SIZE, DEFAULT_SIZE);
-		vFillDefMatrix(0);
-	}
-		
 }
 
 template<typename T>
 inline CMatrix<T>::CMatrix(CMatrix<T>& cOther)
 {
-	cout << "KOPIUJE!" << endl;
-	iMSize = cOther.iMSize;
-	iNSize = cOther.iNSize;
-	tMatrix = new T * [iMSize];
-
-	for (int i = 0; i < iMSize; i++)
-		tMatrix[i] = new T[iNSize];
-	for (int i = 0; i < iMSize; i++)
-		for (int j = 0; j < iNSize; j++)
-			tMatrix[i][j] = cOther.tGetValuFrom(i, j);
+	vDeleteMatrix();
+	if (cOther.iMSize > 0 && cOther.iNSize > 0) {
+		iMSize = cOther.iMSize;
+		iNSize = cOther.iNSize;
+		vCopy(cOther.tMatrix);
+	}
+	else
+		vInitialMatrix(DEFAULT_SIZE, DEFAULT_SIZE);
+	
 }
 
 template<typename T>
 inline  CMatrix<T>::CMatrix(CMatrix<T>&& cOther)
 {
-	cout << "PRZENOSZE" << endl;
 	iMSize = cOther.iMSize;
 	iNSize = cOther.iNSize;
 	tMatrix = cOther.tMatrix;
@@ -124,132 +131,172 @@ inline  CMatrix<T>::CMatrix(CMatrix<T>&& cOther)
 template<typename T>
 inline CMatrix<T>::~CMatrix()
 {
-	cout << "USUWAM" << endl;
-	vPrintMatrix();
+	vDeleteMatrix();
+}
+
+template<typename T>
+inline void CMatrix<T>::vDeleteMatrix()
+{
 	if (tMatrix != NULL) {
 		for (int i = 0; i < iMSize; i++)
-			if(tMatrix[i] != NULL)
-			delete[] tMatrix[i];
-		delete tMatrix;
+			if (tMatrix[i] != NULL)
+				delete[] tMatrix[i];
+		delete[] tMatrix;
 	}
-	cout << "USUNIETE" << endl;
-	
 }
 
 template<typename T>
-inline void CMatrix<T>::vPrintMatrix()
+inline void CMatrix<T>::vCopy(T** tOther)
 {
-	if(tMatrix != NULL)
-	for (int i = 0; i < iMSize; i++) {
-		cout << "| ";
+	tMatrix = new T * [iMSize];
+	for (int i = 0; i < iMSize; i++)
+		tMatrix[i] = new T[iNSize];
+	for (int i = 0; i < iMSize; i++)
 		for (int j = 0; j < iNSize; j++)
-			cout << tMatrix[i][j] << " ";
-		cout << " |" << endl;
-	}
+			tMatrix[i][j] = tOther[i][j];
 }
 
 template<typename T>
-inline bool CMatrix<T>::bCreateMatrix(int iMSize, int iNSize)
+inline bool CMatrix<T>::vInitialMatrix(int iMSize, int iNSize)
 {
 	if (iMSize > 0 && iNSize > 0) {
-		T** tNewMatrix = new T *[iMSize];
-
+		tMatrix = new T * [iMSize];
 		for (int i = 0; i < iMSize; i++)
-			tNewMatrix[i] = new T[iNSize];
-
-		if (tMatrix != NULL) {
-			for (int i = 0; i < this->iMSize; i++)
-					delete[] tMatrix[i];
-			delete[] tMatrix;
-		}
-	
-		tMatrix = tNewMatrix;
+			tMatrix[i] = new T[iNSize];
 		this->iMSize = iMSize;
 		this->iNSize = iNSize;
 		return true;
 	}
-	else 
+	else {
 		return false;
+	}
 }
 
 template<typename T>
-inline void CMatrix<T>::operator=(const CMatrix<T>& cOther)
+inline bool CMatrix<T>::bCreateMatrix(int iMSize, int iNSize, CErrorMatrix* cErrorCode)
 {
-	if (bCreateMatrix(cOther.iMSize, cOther.iNSize))
+	bool flag = false;
+	if (iMSize <= 0) { cErrorCode->vSetErrorCode(INVALID_ARGUMENT_M_SIZE); flag = true; }
+	if (iNSize <= 0) { cErrorCode->vSetErrorCode(INVALID_ARGUMENT_N_SIZE); flag = true; }
+	if (!flag){
+		vDeleteMatrix();
+		if(vInitialMatrix(iMSize, iNSize))
+			vFillDefMatrix(0);
+		return true;
+	}
+	return false;
+}
+
+template<typename T>
+inline CMatrix<T>& CMatrix<T>::operator=(const CMatrix<T>& cOther)
+{
+	CErrorMatrix* cErrorCode = new CErrorMatrix;
+	if (bCreateMatrix(cOther.iMSize, cOther.iNSize,cErrorCode))
 		for (int i = 0; i < iMSize; i++)
 			for (int j = 0; j < iNSize; j++)
 				tMatrix[i][j] = cOther.tMatrix[i][j];
-	else {
-		bCreateMatrix(DEFAULT_SIZE, DEFAULT_SIZE);
-		vFillDefMatrix(0);
-	}
+	if(cErrorCode->iGetErrorCode() != 0) throw std::invalid_argument(cErrorCode->sErrorInfo());
+	return *this;
 }
 
 template<typename T>
-inline T CMatrix<T>::tGetValuFrom(int iM, int iN)
+inline void CMatrix<T>::operator=(CMatrix<T>&& cOther)
 {
-	return (iM < iMSize&& iN < iNSize) ? tMatrix[iM][iN] : std::numeric_limits<T>::quiet_NaN();
+	iMSize = cOther.iMSize;
+	iNSize = cOther.iNSize;
+	tMatrix = cOther.tMatrix;
+	cOther.tMatrix = NULL;
 }
 
 template<typename T>
-inline bool CMatrix<T>::bSetValueAt(int iM, int iN, T tNewValue)
+inline T CMatrix<T>::tGetValuFrom(int iM, int iN, CErrorMatrix* cErrorCode)
 {
-	if (iM < iMSize && iN < iNSize) {
+	bool flag = false;
+	if (iM < 0) { cErrorCode->vSetErrorCode(INVALID_ARGUMENT_M_SIZE); flag = true; }
+	if (iN < 0) { cErrorCode->vSetErrorCode(INVALID_ARGUMENT_N_SIZE); flag = true; }
+	if (iM >= iMSize) { cErrorCode->vSetErrorCode(INCORRECT_SIZE_M); flag = true; }
+	if (iN >= iNSize) { cErrorCode->vSetErrorCode(INCORRECT_SIZE_N); flag = true; }
+	return (!flag) ? tMatrix[iM][iN] : std::numeric_limits<T>::quiet_NaN();
+}
+
+template<typename T>
+inline T* CMatrix<T>::operator[](int iM)
+{
+	if (iM < 0) throw std::invalid_argument("ERROR CODE:" + to_string(INVALID_ARGUMENT));
+	if (iM >= iMSize) throw std::out_of_range("ERROR CODE:" + to_string(INCORRECT_SIZE));
+	return tMatrix[iM];
+}
+
+template<typename T>
+inline bool CMatrix<T>::bSetValueAt(int iM, int iN, T tNewValue, CErrorMatrix* cErrorCode)
+{
+	bool flag = false;
+	if (iM < 0) { cErrorCode->vSetErrorCode(INVALID_ARGUMENT_M_SIZE); flag = true; }
+	if (iN < 0) { cErrorCode->vSetErrorCode(INVALID_ARGUMENT_N_SIZE); flag = true; }
+	if (iM >= iMSize) { cErrorCode->vSetErrorCode(INCORRECT_SIZE_M); flag = true; }
+	if (iN >= iNSize) { cErrorCode->vSetErrorCode(INCORRECT_SIZE_N); flag = true; }
+	if(!flag) {
 		tMatrix[iM][iN] = tNewValue;
 		return true;
 	}
-	else 
 		return false;
 }
 
 template<typename T>
-inline bool CMatrix<T>::bSetIdentityMatrix()
+inline bool CMatrix<T>::bSetIdentityMatrix(CErrorMatrix* cErrorCode)
 {
-	if (bIsSquareMatrix()) {
+	if (!bIsSquareMatrix()) cErrorCode->vSetErrorCode(INVALID_ARGUMENT);
+	else
+	{
 		vFillDefMatrix(0);
 		for (int i = 0; i < iMSize; i++)
 			tMatrix[i][i] = 1;
 		return true;
 	}
-	else 
 		return false;
 }
 
 template<typename T>
-inline CMatrix<T> CMatrix<T>::cTColumnVector(int iCol)
+inline CMatrix<T> CMatrix<T>::cTColumnVector(int iCol, CErrorMatrix* cErrorCode)
 {
-	CMatrix<T> newTMatrix(1, iNSize);
-	if (iCol < iNSize) 
+	CMatrix<T> newTMatrix(1, iMSize);
+	bool flag = false;
+	if (iCol < 0) { cErrorCode->vSetErrorCode(INVALID_ARGUMENT); flag = true; }
+	if (iCol >= iNSize) { cErrorCode->vSetErrorCode(INCORRECT_SIZE); flag = true; }
+	if(!flag)
 		for (int i = 0; i < iMSize; i++)
 			newTMatrix[0][i] = tMatrix[i][iCol];
-	
 	return std::move(newTMatrix);
 }
 
 template<typename T>
-inline CMatrix<T> CMatrix<T>::cTRowVector(int iRow)
+inline CMatrix<T> CMatrix<T>::cTRowVector(int iRow, CErrorMatrix* cErrorCode)
 {
-	CMatrix<T> newTMatrix (1, iMSize);
-	if (iRow < iMSize) 
+	CMatrix<T> newTMatrix(1, iNSize);
+	bool flag = false;
+	if (iRow < 0) { cErrorCode->vSetErrorCode(INVALID_ARGUMENT); flag = true; }
+	if (iRow >= iMSize) { cErrorCode->vSetErrorCode(INCORRECT_SIZE); flag = true; }
+	if(!flag)
 		for (int i = 0; i < iNSize; i++)
 			newTMatrix[0][i] = tMatrix[iRow][i];
-	return newTMatrix;
+	return std::move(newTMatrix);
 }
 
 template<typename T>
-inline bool CMatrix<T>::bRedMatrixFromFile(string sFileName)
+inline bool CMatrix<T>::bReadMatrixFromFile(string sFileName, CErrorMatrix* cErrorCode)
 {
 	vector<vector<T>> vTMatrix;
-	ifstream file(sFileName.c_str() , ios_base::in);
-	string blad;
+	ifstream file(sFileName.c_str(), ios_base::in);
 
-	if (!file.is_open()) 
-		return false; 
+	if (!file.is_open()) {
+		cErrorCode->vSetErrorCode(INVALID_FILE_NAME);
+		return false;
+	}
 	else {
 		string line;
 		vector<T> row;
 		T data;
-
+		string blad;
 		while (getline(file, line)) {
 			istringstream ss(line);
 			while (!ss.eof()) {
@@ -257,7 +304,9 @@ inline bool CMatrix<T>::bRedMatrixFromFile(string sFileName)
 				if (ss.fail()) {
 					ss.clear();
 					ss >> blad;
-					row.push_back(0);
+					cErrorCode->vSetErrorCode(INCORRECT_VALUE);
+					if(blad[0] != '.')
+						row.push_back(0);
 				}
 				else
 					row.push_back(data);
@@ -265,83 +314,121 @@ inline bool CMatrix<T>::bRedMatrixFromFile(string sFileName)
 			vTMatrix.push_back(row);
 			row.clear();
 		}
-
 		file.close();
-		return bCreateMatrixFromVector(vTMatrix);
+		return bCreateMatrixFromVector(vTMatrix, cErrorCode);
 	}
 }
 
 template<typename T>
-inline CMatrix<T> CMatrix<T>::ctTranspose()
+inline CMatrix<T>& CMatrix<T>::ctTranspose(CErrorMatrix* cErrorCode)
 {
-	CMatrix<T> tNewMatrix(iNSize, iMSize);
-	for (int i = 0; i < iMSize; i++)
-		for (int j = 0; j < iNSize; j++)
-			tNewMatrix->bSetValueAt(j, i, tMatrix[i][j]);
-	return std::move(tNewMatrix);
+	bool flag = false;
+	if (iMSize < 0) { cErrorCode->vSetErrorCode(INCORRECT_SIZE_M); flag = true; }
+	if (iNSize < 0) { cErrorCode->vSetErrorCode(INCORRECT_SIZE_N); flag = true; }
+	if (!flag) {
+		CMatrix<T> tNewMatrix(iNSize, iMSize);
+		for (int i = 0; i < iMSize; i++)
+			for (int j = 0; j < iNSize; j++)
+				tNewMatrix.tMatrix[j][i] = tMatrix[i][j];
+		*this = std::move(tNewMatrix);
+	}
+	return *this;
 }
 
 template<typename T>
-inline T CMatrix<T>::tScalarProduct(CMatrix<T>& tMatrix)
+inline void CMatrix<T>::operator~()
+{
+	CErrorMatrix* cErrorCode = new CErrorMatrix;
+	ctTranspose(cErrorCode);
+	if (cErrorCode->iGetErrorCode() != 0) throw std::logic_error(cErrorCode->sErrorInfo());
+	delete cErrorCode;
+}
+
+template<typename T>
+inline T CMatrix<T>::tScalarProduct(CMatrix<T>& tMatrix, CErrorMatrix* cErrorCode)
 {
 	T result = std::numeric_limits<T>::quiet_NaN();
-	if (tMatrix.iGetIMSize() == 1 && iMSize == 1 && tMatrix.iGetINSize() == iNSize) {
+	bool flag = false;
+	if (tMatrix.iGetIMSize() != 1) {cErrorCode->vSetErrorCode(INVALID_ARGUMENT_M_SIZE); flag = true;}
+	if (iMSize != 1) { cErrorCode->vSetErrorCode(INCORRECT_SIZE_M); flag = true; }
+	if (tMatrix.iGetINSize() != iNSize) { cErrorCode->vSetErrorCode(INCORRECT_SIZE_N); flag = true; }
+	if(!flag) {
 		result = 0;
 		for (int i = 0; i < iNSize; i++)
-			result += tGetValuFrom(0, i) * tMatrix.tGetValuFrom(0, i);
+			result += tGetValuFrom(0, i, cErrorCode) * tMatrix.tGetValuFrom(0, i, cErrorCode);
 	}
 	return result;
 }
 
 template<typename T>
-inline CMatrix<T> CMatrix<T>::cAdd(const CMatrix<T>& cOther)
+inline CMatrix<T> CMatrix<T>::cAdd(const CMatrix<T>& cOther, CErrorMatrix* cErrorCode)
 {
 	CMatrix<T> tNewMatrix(iMSize, iNSize);
-	if (iMSize == cOther.iMSize && iNSize == cOther.iNSize)
+	bool flag = false;
+	if (iMSize != cOther.iMSize) { cErrorCode->vSetErrorCode(INCORRECT_SIZE_M); flag = true; }
+	if (iNSize != cOther.iNSize) { cErrorCode->vSetErrorCode(INCORRECT_SIZE_N); flag = true; }
+	if (!flag) {
 		for (int i = 0; i < iMSize; i++)
 			for (int j = 0; j < iNSize; j++)
-				tNewMatrix.bSetValueAt(i, j, tMatrix[i][j] + cOther.tMatrix[i][j]);
+				tNewMatrix.tMatrix[i][j] = tMatrix[i][j] + cOther.tMatrix[i][j], cErrorCode;
+	}
 	return std::move(tNewMatrix);
 }
 
 template<typename T>
 inline CMatrix<T> CMatrix<T>::operator+(const CMatrix<T>& cOther) {
-	return cAdd(cOther);
+	CErrorMatrix* cErrorCode = new CErrorMatrix;
+	CMatrix<T> tNewMatrix = cAdd(cOther, cErrorCode);
+	if (cErrorCode->iGetErrorCode() != 0) throw std::invalid_argument(cErrorCode->sErrorInfo());
+	delete cErrorCode;
+	return std::move(tNewMatrix);
 }
 
 template<typename T>
-inline void CMatrix<T>::operator+=(const CMatrix<T>& cOther)
+inline CMatrix<T>& CMatrix<T>::operator+=(const CMatrix<T>& cOther)
 {
-	if (iMSize == cOther.iMSize && iNSize == cOther.iNSize)
-		for (int i = 0; i < iMSize; i++)
-			for (int j = 0; j < iNSize; j++)
-				bSetValueAt(i, j, tMatrix[i][j] + cOther.tMatrix[i][j]);
+	if (iMSize != cOther.iMSize) throw std::invalid_argument("ERROR CODE: " + to_string(INCORRECT_SIZE_M));
+	if (iNSize != cOther.iNSize) throw std::invalid_argument("ERROR CODE: " + to_string(INCORRECT_SIZE_N));
+	for (int i = 0; i < iMSize; i++)
+		for (int j = 0; j < iNSize; j++)
+			tMatrix[i][j] = tMatrix[i][j] + cOther.tMatrix[i][j];
+	return *this;
 }
 
 template<typename T>
-inline CMatrix<T> CMatrix<T>::cSub(const CMatrix<T>& cOther)
+inline CMatrix<T> CMatrix<T>::cSub(const CMatrix<T>& cOther, CErrorMatrix* cErrorCode)
 {
 	CMatrix<T> tNewMatrix(iMSize, iNSize);
-	if (iMSize == cOther.iMSize && iNSize == cOther.iNSize)
+	bool flag = false;
+	if (iMSize != cOther.iMSize) { cErrorCode->vSetErrorCode(INCORRECT_SIZE_M); flag = true; }
+	if (iNSize != cOther.iNSize) { cErrorCode->vSetErrorCode(INCORRECT_SIZE_N); flag = true; }
+	if(!flag) {
 		for (int i = 0; i < iMSize; i++)
 			for (int j = 0; j < iNSize; j++)
-				tNewMatrix.bSetValueAt(i, j, tMatrix[i][j] - cOther.tMatrix[i][j]);
+				tNewMatrix.tMatrix[i][j] = tMatrix[i][j] - cOther.tMatrix[i][j];
+	}
 	return std::move(tNewMatrix);
 }
 
 template<typename T>
 inline CMatrix<T> CMatrix<T>::operator-(const CMatrix<T>& cOther)
 {
-	return cSub(cOther);
+	CErrorMatrix* cErrorCode = new CErrorMatrix;
+	CMatrix<T> tNewMatrix = cSub(cOther, cErrorCode);
+	if (cErrorCode->iGetErrorCode() != 0) throw std::invalid_argument(cErrorCode->sErrorInfo());
+	delete cErrorCode;
+	return std::move(tNewMatrix);
 }
 
 template<typename T>
-inline void CMatrix<T>::operator-=(const CMatrix<T>& cOther)
+inline CMatrix<T>& CMatrix<T>::operator-=(const CMatrix<T>& cOther)
 {
-	if (iMSize == cOther.iMSize && iNSize == cOther.iNSize)
+	if (iMSize != cOther.iMSize) throw std::invalid_argument("ERROR CODE: " + to_string(INVALID_ARGUMENT_M_SIZE));
+	if (iNSize != cOther.iNSize) throw std::invalid_argument("ERROR CODE: " + to_string(INVALID_ARGUMENT_N_SIZE));
 		for (int i = 0; i < iMSize; i++)
 			for (int j = 0; j < iNSize; j++)
-				bSetValueAt(i, j, tMatrix[i][j] - cOther.tMatrix[i][j]);
+				tMatrix[i][j] = tMatrix[i][j] - cOther.tMatrix[i][j];
+	return *this;
 }
 
 template<typename T>
@@ -350,7 +437,7 @@ inline CMatrix<T> CMatrix<T>::cMult(const T tVal)
 	CMatrix<T> tNewMatrix(iMSize, iNSize);
 	for (int i = 0; i < iMSize; i++)
 		for (int j = 0; j < iNSize; j++)
-			tNewMatrix.bSetValueAt(i, j, tMatrix[i][j] * tVal);
+			tNewMatrix.tMatrix[i][j] = tMatrix[i][j] * tVal;
 	return std::move(tNewMatrix);
 }
 
@@ -361,24 +448,26 @@ inline CMatrix<T> CMatrix<T>::operator*(const T tVal)
 }
 
 template<typename T>
-inline void CMatrix<T>::operator*=(const T tVal)
+inline CMatrix<T>& CMatrix<T>::operator*=(const T tVal)
 {
 	for (int i = 0; i < iMSize; i++)
 		for (int j = 0; j < iNSize; j++)
-			bSetValueAt(i, j, tMatrix[i][j] * tVal);
+			tMatrix[i][j] = tMatrix[i][j] * tVal;
+	return *this;
 }
 
 template<typename T>
-inline CMatrix<T> CMatrix<T>::cMult(const CMatrix<T>& cOther)
+inline CMatrix<T> CMatrix<T>::cMult(const CMatrix<T>& cOther, CErrorMatrix* cErrorCode)
 {
 	CMatrix<T> tNewMatrix(iMSize, cOther.iNSize);
-	if (iNSize == cOther.iMSize) {
+	if (iNSize != cOther.iMSize) cErrorCode->vSetErrorCode(INCORRECT_SIZE_MULTIPLAYING);
+	else{
 		for (int i = 0; i < iMSize; i++)
 			for (int j = 0; j < cOther.iNSize; j++) {
 				T s = 0;
 				for (int k = 0; k < iNSize; k++)
 					s += tMatrix[i][k] * cOther.tMatrix[i][j];
-				tNewMatrix.bSetValueAt(i, j, s);
+				tNewMatrix.tMatrix[i][j] = s;
 			}
 	}
 	return std::move(tNewMatrix);
@@ -387,23 +476,22 @@ inline CMatrix<T> CMatrix<T>::cMult(const CMatrix<T>& cOther)
 template<typename T>
 inline CMatrix<T> CMatrix<T>::operator*(const CMatrix<T>& cOther)
 {
-	return cMult(cOther);
+	CErrorMatrix* cErrorCode = new CErrorMatrix;
+	CMatrix<T> tNewMatrix = cMult(cOther, cErrorCode);
+	if (cErrorCode->iGetErrorCode() != 0) throw std::invalid_argument(cErrorCode->sErrorInfo());
+	delete cErrorCode;
+	return std::move(tNewMatrix);
 }
 
 template<typename T>
-inline void CMatrix<T>::operator*=(const CMatrix<T>& cOther)
+inline CMatrix<T>& CMatrix<T>::operator*=(const CMatrix<T>& cOther)
 {
-	if (iNSize == cOther.iMSize) {
-		if (iNSize != cOther.iNSize);
-		bCreateMatrix(iMSize, cOther.iNSize);
-		for (int i = 0; i < iMSize; i++)
-			for (int j = 0; j < cOther.iNSize; j++) {
-				T s = 0;
-				for (int k = 0; k < iNSize; k++)
-					s += tMatrix[i][k] * cOther.tMatrix[i][j];
-				bSetValueAt(i, j, s);
-			}
-	}
+	CErrorMatrix* cErrorCode = new CErrorMatrix;
+	CMatrix<T> tNewMatrix = cMult(cOther, cErrorCode);
+	if (cErrorCode->iGetErrorCode() != 0) throw std::invalid_argument(cErrorCode->sErrorInfo());
+	*this = std::move(tNewMatrix);
+	delete cErrorCode;
+	return *this;
 }
 
 template<typename T>
@@ -416,45 +504,44 @@ inline void CMatrix<T>::vFillDefMatrix(T iValue)
 }
 
 template<typename T>
-inline bool CMatrix<T>::bCreateMatrixFromVector(vector<vector<T>> vTMatrix)
+inline bool CMatrix<T>::bCreateMatrixFromVector(vector<vector<T>> vTMatrix, CErrorMatrix* cErrorCode)
 {
-	map<int, int> mColLength;
-	map<int, int>::iterator it;
+	if (vTMatrix.size() > 0) {
+		map<int, int> mColLength;
+		map<int, int>::iterator it;
 
-	int iMaxNumOfCol = -1;
-	int iNumOfCol;
-	int length = 0;
+		int iMaxNumOfCol = -1;
+		int iNumOfCol;
+		int length = 0;
 
-	for (int i = 0; i < vTMatrix.size(); i++) {
-		length = vTMatrix[i].size();
-		it = mColLength.find(length);
-		if (it != mColLength.end()) mColLength[length] = it->second + 1;
-		else mColLength.insert(pair<int, int>(length, 1));
-	}
+		for (int i = 0; i < vTMatrix.size(); i++) {
+			length = vTMatrix[i].size();
+			it = mColLength.find(length);
+			if (it != mColLength.end()) mColLength[length] = it->second + 1;
+			else mColLength.insert(pair<int, int>(length, 1));
+		}
 
-	for (it = mColLength.begin(); it != mColLength.end(); ++it) {
-		cout << it->first << " => " << it->second << endl;
-		if (it->second > iMaxNumOfCol) {
-			iMaxNumOfCol = it->second;
-			iNumOfCol = it->first;
+		if (mColLength.size() != 1) cErrorCode->vSetErrorCode(INCORRECT_ROW_LENGTH);
+
+		for (it = mColLength.begin(); it != mColLength.end(); ++it) {
+			if (it->second > iMaxNumOfCol) {
+				iMaxNumOfCol = it->second;
+				iNumOfCol = it->first;
+			}
+		}
+
+		if (bCreateMatrix(vTMatrix.size(), iNumOfCol, cErrorCode)) {
+			vFillDefMatrix(0);
+			for (int i = 0; i < iMSize; i++)
+				for (int j = 0; j < (vTMatrix[i].size() < iNSize ? vTMatrix[i].size() : iNSize); j++)
+					tMatrix[i][j] = vTMatrix[i][j];
+			return true;
 		}
 	}
-
-	if (bCreateMatrix(vTMatrix.size(), iNumOfCol)) {
-		vFillDefMatrix(0);
-		for (int i = 0; i < iMSize; i++)
-			for (int j = 0; j < (vTMatrix[i].size()<iNSize ? vTMatrix[i].size() : iNSize ); j++)
-				tMatrix[i][j] = vTMatrix[i][j];
-		return true;
-	}
-	else 
+	else {
+		cErrorCode->vSetErrorCode(INCORRECT_VECTOR_SIZE);
 		return false;
-}
-
-template<typename T>
-inline bool CMatrix<T>::operator=(const vector<vector<T>> vTMatrix)
-{
-	return bCreateMatrixFromVector(vTMatrix);
+	}
 }
 
 
